@@ -5,6 +5,7 @@ plugins {
   kotlin("jvm")
   id("org.jetbrains.dokka")
   id("com.vanniktech.maven.publish.base")
+  id("binary-compatibility-validator")
 }
 
 tasks.jar {
@@ -14,12 +15,13 @@ tasks.jar {
 }
 
 dependencies {
-  api(project(":mockwebserver3"))
-  api(Dependencies.junit)
+  api(projects.mockwebserver3)
+  api(libs.junit)
 
-  testImplementation(Dependencies.assertj)
+  testImplementation(libs.assertk)
+  testImplementation(libs.junit.vintage.engine)
 }
 
 mavenPublishing {
-  configure(KotlinJvm(javadocJar = JavadocJar.Dokka("dokkaGfm")))
+  configure(KotlinJvm(javadocJar = JavadocJar.Empty()))
 }

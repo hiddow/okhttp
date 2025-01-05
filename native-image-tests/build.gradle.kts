@@ -1,70 +1,68 @@
-import org.apache.tools.ant.taskdefs.condition.Os
-
 plugins {
-  id("com.palantir.graal")
-}
-
-dependencies {
-  implementation(Dependencies.assertj)
-  implementation(Dependencies.junit5Api)
-  implementation(Dependencies.junit5JupiterEngine)
-  implementation(Dependencies.junitPlatformConsole)
-  implementation(Dependencies.okioFakeFileSystem)
-
-  implementation(project(":okhttp"))
-  implementation(project(":okhttp-brotli"))
-  implementation(project(":okhttp-dnsoverhttps"))
-  implementation(project(":logging-interceptor"))
-  implementation(project(":okhttp-sse"))
-  implementation(project(":okhttp-testing-support"))
-  implementation(project(":okhttp-tls"))
-  implementation(Dependencies.assertj)
-  implementation(project(":mockwebserver3"))
-  implementation(project(":mockwebserver"))
-  implementation(project(":okhttp-urlconnection"))
-  implementation(project(":mockwebserver3-junit4"))
-  implementation(project(":mockwebserver3-junit5"))
-  implementation(Dependencies.bndResolve)
-  implementation(Dependencies.junit5Api)
-  implementation(Dependencies.junit5JupiterParams)
-
-  implementation(Dependencies.nativeImageSvm)
-
-  compileOnly(Dependencies.jsr305)
+  id("org.graalvm.buildtools.native")
+  kotlin("jvm")
 }
 
 animalsniffer {
   isIgnoreFailures = true
 }
 
+val graal by sourceSets.creating
+
 sourceSets {
-  // Not included in IDE as this confuses Intellij for obvious reasons.
-  main {
+  named("graal") {}
+  test {
     java.srcDirs(
-      "../okhttp/src/test/java",
       "../okhttp-brotli/src/test/java",
       "../okhttp-dnsoverhttps/src/test/java",
       "../okhttp-logging-interceptor/src/test/java",
-      "../okhttp-sse/src/test/java"
+      "../okhttp-sse/src/test/java",
     )
   }
 }
 
-graal {
-  mainClass("okhttp3.RunTestsKt")
-  outputName("ConsoleLauncher")
-  graalVersion(Versions.graal)
-  javaVersion("11")
+dependencies {
+  implementation(libs.junit.jupiter.api)
+  implementation(libs.junit.jupiter.engine)
+  implementation(libs.junit.platform.console)
+  implementation(libs.squareup.okio.fakefilesystem)
 
-  option("--no-fallback")
-  option("--allow-incomplete-classpath")
-  option("--report-unsupported-elements-at-runtime")
-  option("-H:+ReportExceptionStackTraces")
+  implementation(projects.okhttp)
+  implementation(projects.okhttpBrotli)
+  implementation(projects.okhttpDnsoverhttps)
+  implementation(projects.loggingInterceptor)
+  implementation(projects.okhttpSse)
+  implementation(projects.okhttpTestingSupport)
+  implementation(projects.okhttpTls)
+  implementation(projects.mockwebserver3)
+  implementation(projects.mockwebserver)
+  implementation(projects.okhttpJavaNetCookiejar)
+  implementation(projects.mockwebserver3Junit5)
+  implementation(libs.aqute.resolve)
+  implementation(libs.junit.jupiter.api)
+  implementation(libs.junit.jupiter.params)
+  implementation(libs.assertk)
+  implementation(libs.kotlin.test.common)
+  implementation(libs.kotlin.test.junit)
 
-  if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-    // May be possible without, but autodetection is problematic on Windows 10
-    // see https://github.com/palantir/gradle-graal
-    // see https://www.graalvm.org/docs/reference-manual/native-image/#prerequisites
-    windowsVsVarsPath("C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat")
+  compileOnly(libs.findbugs.jsr305)
+
+  "graalCompileOnly"(libs.nativeImageSvm)
+  "graalCompileOnly"(libs.graal.sdk)
+  nativeImageTestCompileOnly(graal.output.classesDirs)
+}
+
+graalvmNative {
+  testSupport = true
+
+  binaries {
+    named("test") {
+      buildArgs.add("--features=okhttp3.nativeImage.TestRegistration")
+      buildArgs.add("--initialize-at-build-time=org.junit.platform.engine.TestTag")
+      buildArgs.add("--strict-image-heap")
+
+      // speed up development testing
+      buildArgs.add("-Ob")
+    }
   }
 }
